@@ -42,3 +42,40 @@ show_progress 90
 # Финальная проверка
 show_progress 100
 echo -e "\nНастройка завершена!"
+
+# Функция для проверки валидности имени пользователя
+validate_username() {
+    local username=$1
+    # Проверка на наличие пробелов и запрещенных символов
+    if [[ "$username" =~ [^a-zA-Z0-9_] ]]; then
+        echo "Имя пользователя может содержать только буквы, цифры и подчеркивания. Пожалуйста, попробуйте снова."
+        return 1
+    fi
+    return 0
+}
+
+# Запрос имени пользователя
+while true; do
+    read -p "Введите имя нового пользователя (без пробелов и специальных символов): " username
+    validate_username "$username" && break
+done
+
+# Запрос пароля для нового пользователя
+while true; do
+    read -s -p "Введите пароль для нового пользователя: " password
+    echo
+    read -s -p "Повторите пароль: " password_confirm
+    echo
+    if [[ "$password" == "$password_confirm" && -n "$password" ]]; then
+        break
+    else
+        echo "Пароли не совпадают или пусты. Попробуйте снова."
+    fi
+done
+
+# Создание нового пользователя и добавление его в группу sudo
+useradd -m -s /bin/bash "$username"
+echo "$username:$password" | chpasswd
+usermod -aG sudo "$username"
+
+echo -e "\nПользователь $username успешно создан и добавлен в группу sudo."
