@@ -19,57 +19,29 @@ show_progress() {
     printf "] %d%%" "$progress"
 }
 
-# Анимация загрузки рядом с прогресс-баром
-loading_animation() {
-    local pid=$1
-    local spin='-\|/'
-    local i=0
-    while kill -0 "$pid" 2>/dev/null; do
-        printf "\r${spin:i++%${#spin}:1}"
-        sleep 0.1
-    done
-    printf "\r "
-}
-
-# Функция для проверки валидности имени пользователя
-validate_username() {
-    local username=$1
-    if [[ "$username" =~ [^a-zA-Z0-9_] ]]; then
-        echo "Имя пользователя может содержать только буквы, цифры и подчеркивания. Пожалуйста, попробуйте снова."
-        return 1
-    fi
-    return 0
-}
-
 # Этапы установки и обновления
 echo "Обновление и установка пакетов..."
 
-# Запускаем анимацию
-(
-    # 1. Обновление списка пакетов
-    show_progress 20
-    apt-get update -y >/dev/null 2>&1
-    show_progress 30
+# 1. Обновление списка пакетов
+show_progress 20
+apt-get update -y >/dev/null 2>&1
+show_progress 30
 
-    # 2. Обновление существующих пакетов
-    apt-get upgrade -y >/dev/null 2>&1
-    show_progress 50
+# 2. Обновление существующих пакетов
+apt-get upgrade -y >/dev/null 2>&1
+show_progress 50
 
-    # 3. Установка sudo
-    apt-get install -y sudo >/dev/null 2>&1
-    show_progress 70
+# 3. Установка sudo
+apt-get install -y sudo >/dev/null 2>&1
+show_progress 70
 
-    # 4. Установка базовых утилит (ufw и fail2ban)
-    apt-get install -y ufw fail2ban >/dev/null 2>&1
-    show_progress 90
+# 4. Установка базовых утилит (ufw и fail2ban)
+apt-get install -y ufw fail2ban >/dev/null 2>&1
+show_progress 90
 
-    # Финальная проверка
-    show_progress 100
-    echo -e "\nНастройка завершена!"
-) &
-
-# Параллельно с прогресс-баром запускаем анимацию
-loading_animation $!
+# Финальная проверка
+show_progress 100
+echo -e "\nНастройка завершена!"
 
 # Запрос на создание нового пользователя вместо root
 echo -e "\nХотите создать нового пользователя для входа в систему вместо root? (да/нет)"
