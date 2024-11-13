@@ -13,10 +13,22 @@ show_progress() {
     local color_empty="\e[41m"  # красный фон
 
     # Построение строки прогресс-бара
-    printf "\r["
+    printf "\r[" 
     printf "${color_fill}%*s${color_reset}" "$fill" ""
     printf "${color_empty}%*s${color_reset}" "$empty" ""
     printf "] %d%%" "$progress"
+}
+
+# Анимация загрузки рядом с прогресс-баром
+loading_animation() {
+    local pid=$1
+    local spin='-\|/'
+    local i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        printf "\r${spin:i++%${#spin}:1}"
+        sleep 0.1
+    done
+    printf "\r "
 }
 
 # Этапы установки и обновления
@@ -43,42 +55,39 @@ show_progress 90
 show_progress 100
 echo -e "\nНастройка завершена!"
 
-# Функция для проверки валидности имени пользователя
-validate_username() {
-    local username=$1
-    # Проверка на наличие пробелов и запрещенных символов
-    if [[ "$username" =~ [^a-zA-Z0-9_] ]]; then
-        echo "Имя пользователя может содержать только буквы, цифры и подчеркивания. Пожалуйста, попробуйте снова."
-        return 1
-    fi
-    return 0
-}
+# Запрос на создание нового пользователя вместо root
+echo -e "\nХотите создать нового пользователя для входа в систему вместо root? (да/нет)"
+read -p "(Ваш ответ: да или нет): " create_new_user
 
-# Запрос имени пользователя
-while true; do
-    read -p "Введите имя нового пользователя (без пробелов и специальных символов): " username
-    validate_username "$username" && break
-done
+if [[ "$create_new_user" =~ ^([дД][аА]|[yY][eE][sS])$ ]]; then
+    # Запрос имени нового пользователя
+    while true; do
+        read -p "Введите имя нового пользователя (без пробелов и специальных символов): " username
+        validate_username "$username" && break
+    done
 
-# Запрос пароля для нового пользователя
-while true; do
-    read -s -p "Введите пароль для нового пользователя: " password
-    echo
-    read -s -p "Повторите пароль: " password_confirm
-    echo
-    if [[ "$password" == "$password_confirm" && -n "$password" ]]; then
-        break
-    else
-        echo "Пароли не совпадают или пусты. Попробуйте снова."
-    fi
-done
+    # Запрос пароля для нового пользователя
+    while true; do
+        read -s -p "Введите пароль для нового пользователя: " password
+        echo
+        read -s -p "Повторите пароль: " password_confirm
+        echo
+        if [[ "$password" == "$password_confirm" && -n "$password" ]]; then
+            break
+        else
+            echo "Пароли не совпадают или пусты. Попробуйте снова."
+        fi
+    done
 
-# Создание нового пользователя и добавление его в группу sudo
-useradd -m -s /bin/bash "$username"
-echo "$username:$password" | chpasswd
-usermod -aG sudo "$username"
+    # Создание нового пользователя и добавление его в группу sudo
+    useradd -m -s /bin/bash "$username"
+    echo "$username:$password" | chpasswd
+    usermod -aG sudo "$username"
 
-echo -e "\nПользователь $username успешно создан и добавлен в группу sudo."
+    echo -e "\nПользователь $username успешно создан и добавлен в группу sudo."
+else
+    echo -e "\nОставляем root-пользователя для входа в систему."
+fi
 
 # Настройка порта для SSH
 while true; do
@@ -124,7 +133,6 @@ echo -e "\nФаервол успешно настроен!"
 read -p "Хотите запретить вход по SSH для root-пользователя? (да/нет): " disable_root_ssh
 if [[ "$disable_root_ssh" =~ ^([дД][аА]|[yY][eE][sS])$ ]]; then
     sed -i '/^#*PermitRootLogin/s/^#*\(.*\)/PermitRootLogin no/' /etc/ssh/sshd_config
-
     systemctl restart ssh
     echo -e "\nВход по SSH для root-пользователя успешно запрещен."
 else
