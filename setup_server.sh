@@ -96,5 +96,36 @@ done
 # Настройка порта SSH в конфигурации
 sed -i "s/^#Port 22/Port $ssh_port/" /etc/ssh/sshd_config
 systemctl restart ssh
+echo -e "\nПорт SSH успешно изменен на $ssh_port."
 
-echo -e "\nПорт SSH успешно изменен на $ssh_port. Пожалуйста, запомните новый порт для подключения к серверу!"
+# Настройка firewall с UFW
+echo "Настройка фаервола (ufw)..."
+
+# Разрешить подключение по новому порту SSH
+ufw allow "$ssh_port"/tcp >/dev/null 2>&1
+show_progress 20
+
+# Разрешить трафик на HTTP и HTTPS порты
+ufw allow http >/dev/null 2>&1
+ufw allow https >/dev/null 2>&1
+show_progress 50
+
+# Запретить входящий трафик по умолчанию и разрешить исходящий
+ufw default deny incoming >/dev/null 2>&1
+ufw default allow outgoing >/dev/null 2>&1
+show_progress 70
+
+# Включить UFW
+ufw --force enable >/dev/null 2>&1
+show_progress 100
+echo -e "\nФаервол успешно настроен!"
+
+# Предложение запретить root доступ по SSH
+read -p "Хотите запретить вход по SSH для root-пользователя? (да/нет): " disable_root_ssh
+if [[ "$disable_root_ssh" =~ ^([дД][аА]|[yY][eE][sS])$ ]]; then
+    sed -i "s/^#PermitRootLogin yes/PermitRootLogin no/" /etc/ssh/sshd_config
+    systemctl restart ssh
+    echo -e "\nВход по SSH для root-пользователя успешно запрещен."
+else
+    echo -e "\nВход по SSH для root-пользователя оставлен включенным."
+fi
