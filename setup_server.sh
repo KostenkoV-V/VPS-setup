@@ -123,7 +123,8 @@ echo -e "\nФаервол успешно настроен!"
 # Предложение запретить root доступ по SSH
 read -p "Хотите запретить вход по SSH для root-пользователя? (да/нет): " disable_root_ssh
 if [[ "$disable_root_ssh" =~ ^([дД][аА]|[yY][eE][sS])$ ]]; then
-    sed -i "s/^#PermitRootLogin yes/PermitRootLogin no/" /etc/ssh/sshd_config
+    sed -i '/^#*PermitRootLogin/s/^#*\(.*\)/PermitRootLogin no/' /etc/ssh/sshd_config
+
     systemctl restart ssh
     echo -e "\nВход по SSH для root-пользователя успешно запрещен."
 else
