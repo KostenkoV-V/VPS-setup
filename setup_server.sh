@@ -31,6 +31,16 @@ loading_animation() {
     printf "\r "
 }
 
+# Функция для проверки валидности имени пользователя
+validate_username() {
+    local username=$1
+    if [[ "$username" =~ [^a-zA-Z0-9_] ]]; then
+        echo "Имя пользователя может содержать только буквы, цифры и подчеркивания. Пожалуйста, попробуйте снова."
+        return 1
+    fi
+    return 0
+}
+
 # Этапы установки и обновления
 echo "Обновление и установка пакетов..."
 
@@ -59,7 +69,10 @@ echo -e "\nНастройка завершена!"
 echo -e "\nХотите создать нового пользователя для входа в систему вместо root? (да/нет)"
 read -p "(Ваш ответ: да или нет): " create_new_user
 
-if [[ "$create_new_user" =~ ^([дД][аА]|[yY][eE][sS])$ ]]; then
+# Убираем пробелы и конвертируем ответ в нижний регистр для корректной проверки
+create_new_user=$(echo "$create_new_user" | tr '[:upper:]' '[:lower:]' | tr -s ' ')
+
+if [[ "$create_new_user" =~ ^(да|y|yes)$ ]]; then
     # Запрос имени нового пользователя
     while true; do
         read -p "Введите имя нового пользователя (без пробелов и специальных символов): " username
@@ -93,8 +106,6 @@ fi
 while true; do
     echo "Для повышения безопасности сервера рекомендуется изменить стандартный порт SSH."
     read -p "Введите новый порт SSH (рекомендуется диапазон от 1024 до 65535): " ssh_port
-
-    # Проверка, что порт является числом и находится в допустимом диапазоне
     if [[ "$ssh_port" =~ ^[0-9]+$ ]] && ((ssh_port >= 1024 && ssh_port <= 65535)); then
         break
     else
@@ -131,7 +142,7 @@ echo -e "\nФаервол успешно настроен!"
 
 # Предложение запретить root доступ по SSH
 read -p "Хотите запретить вход по SSH для root-пользователя? (да/нет): " disable_root_ssh
-if [[ "$disable_root_ssh" =~ ^([дД][аА]|[yY][eE][sS])$ ]]; then
+if [[ "$disable_root_ssh" =~ ^(да|y|yes)$ ]]; then
     sed -i '/^#*PermitRootLogin/s/^#*\(.*\)/PermitRootLogin no/' /etc/ssh/sshd_config
     systemctl restart ssh
     echo -e "\nВход по SSH для root-пользователя успешно запрещен."
