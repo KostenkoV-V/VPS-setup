@@ -44,26 +44,32 @@ validate_username() {
 # Этапы установки и обновления
 echo "Обновление и установка пакетов..."
 
-# 1. Обновление списка пакетов
-show_progress 20
-apt-get update -y >/dev/null 2>&1
-show_progress 30
+# Запускаем анимацию
+(
+    # 1. Обновление списка пакетов
+    show_progress 20
+    apt-get update -y >/dev/null 2>&1
+    show_progress 30
 
-# 2. Обновление существующих пакетов
-apt-get upgrade -y >/dev/null 2>&1
-show_progress 50
+    # 2. Обновление существующих пакетов
+    apt-get upgrade -y >/dev/null 2>&1
+    show_progress 50
 
-# 3. Установка sudo
-apt-get install -y sudo >/dev/null 2>&1
-show_progress 70
+    # 3. Установка sudo
+    apt-get install -y sudo >/dev/null 2>&1
+    show_progress 70
 
-# 4. Установка базовых утилит (ufw и fail2ban)
-apt-get install -y ufw fail2ban >/dev/null 2>&1
-show_progress 90
+    # 4. Установка базовых утилит (ufw и fail2ban)
+    apt-get install -y ufw fail2ban >/dev/null 2>&1
+    show_progress 90
 
-# Финальная проверка
-show_progress 100
-echo -e "\nНастройка завершена!"
+    # Финальная проверка
+    show_progress 100
+    echo -e "\nНастройка завершена!"
+) &
+
+# Параллельно с прогресс-баром запускаем анимацию
+loading_animation $!
 
 # Запрос на создание нового пользователя вместо root
 echo -e "\nХотите создать нового пользователя для входа в систему вместо root? (да/нет)"
