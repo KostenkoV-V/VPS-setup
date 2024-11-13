@@ -43,7 +43,7 @@
 ```bash
 apt-get update -y
 apt-get upgrade -y
-    ```
+```
 
 ### 2. Установка необходимых утилит
 
