@@ -31,28 +31,46 @@ function print_step {
     echo -e "${PURPLE}[Шаг] $1${NC}"
 }
 
+# Функция для прогресса
+function show_progress {
+    local duration=$1
+    local progress=0
+    while [ $progress -le 100 ]; do
+        echo -ne "\r${CYAN}Процесс: [${GREEN}$(printf '%*s' $((progress / 2)) | tr ' ' '#')$(printf '%*s' $((50 - progress / 2)))] $progress%${NC}"
+        sleep 0.1
+        ((progress++))
+    done
+    echo ""
+}
+
 # Обновляем список доступных пакетов
 print_info "Обновляем список доступных пакетов..."
+show_progress 10
 apt update -y
 
 # Обновляем все установленные пакеты
 print_info "Обновляем все установленные пакеты..."
+show_progress 10
 apt upgrade -y
 
 # Обновляем дистрибутив до последней версии
 print_info "Обновляем дистрибутив до последней версии..."
+show_progress 10
 apt dist-upgrade -y
 
 # Устанавливаем sudo
 print_info "Устанавливаем sudo..."
+show_progress 10
 apt install sudo -y
 
 # Устанавливаем ufw (если не установлен)
 print_info "Устанавливаем ufw (фаервол)..."
+show_progress 10
 apt install ufw -y
 
 # Устанавливаем fail2ban для защиты от брутфорс атак
 print_info "Устанавливаем fail2ban для защиты от атак..."
+show_progress 10
 apt install fail2ban -y
 
 # Проверка наличия ss или netstat
@@ -95,6 +113,12 @@ new_ssh_port=$(generate_random_port)
 # Запрашиваем имя нового пользователя
 print_info "Введите имя нового пользователя:"
 read new_user
+
+# Проверяем, что имя пользователя введено корректно
+if [[ -z "$new_user" || "$new_user" =~ [[:space:]] ]]; then
+    print_error "Ошибка: Имя пользователя не может быть пустым или содержать пробелы. Попробуйте снова."
+    exit 1
+fi
 
 # Создаем нового пользователя
 print_step "Создаем нового пользователя $new_user..."
