@@ -127,3 +127,34 @@ if [[ "$disable_root_ssh" =~ ^(да|y|yes)$ ]]; then
 else
     echo -e "\nВход по SSH для root-пользователя оставлен включенным."
 fi
+
+# Предложение установить защиту от брутфорса с fail2ban
+read -p "Хотите установить защиту от брутфорса с помощью fail2ban? (да/нет): " install_fail2ban
+
+if [[ "$install_fail2ban" =~ ^(да|y|yes)$ ]]; then
+    # Конфигурирование fail2ban
+    echo -e "\nНастройка fail2ban..."
+
+    # Запрос параметров для fail2ban
+    read -p "Введите количество неудачных попыток входа до блокировки: " max_attempts
+    read -p "Введите время блокировки в секундах: " bantime
+    read -p "Введите временной интервал (в секундах) для подсчета попыток: " findtime
+
+    # Создание или изменение конфигурации для SSH
+    cat <<EOL > /etc/fail2ban/jail.d/ssh.local
+[sshd]
+enabled = true
+port    = $ssh_port
+logpath = /var/log/auth.log
+maxretry = $max_attempts
+bantime = $bantime
+findtime = $findtime
+EOL
+
+    # Перезапуск fail2ban для применения изменений
+    systemctl restart fail2ban
+
+    echo -e "\nЗащита от брутфорса с помощью fail2ban настроена и активирована."
+else
+    echo -e "\nЗащита от брутфорса с помощью fail2ban не будет установлена."
+fi
