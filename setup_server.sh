@@ -1,174 +1,44 @@
 #!/bin/bash
 
-# Цвета для вывода
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[0;37m'
-NC='\033[0m' # Без цвета
+# Функция для отображения цветного прогресс-бара
+show_progress() {
+    local progress=$1
+    local width=50  # ширина прогресс-бара
+    local fill=$((progress * width / 100))
+    local empty=$((width - fill))
 
-# Функция для красивого вывода текста
-function print_info {
-    echo -e "${CYAN}$1${NC}"
+    # Цвета
+    local color_reset="\e[0m"
+    local color_fill="\e[42m"  # зеленый фон
+    local color_empty="\e[41m"  # красный фон
+
+    # Построение строки прогресс-бара
+    printf "\r["
+    printf "${color_fill}%*s${color_reset}" "$fill" ""
+    printf "${color_empty}%*s${color_reset}" "$empty" ""
+    printf "] %d%%" "$progress"
 }
 
-function print_success {
-    echo -e "${GREEN}$1${NC}"
-}
+# Этапы установки и обновления
+echo "Обновление и установка пакетов..."
 
-function print_warning {
-    echo -e "${YELLOW}$1${NC}"
-}
+# 1. Обновление списка пакетов
+show_progress 20
+apt-get update -y >/dev/null 2>&1
+show_progress 30
 
-function print_error {
-    echo -e "${RED}$1${NC}"
-}
+# 2. Обновление существующих пакетов
+apt-get upgrade -y >/dev/null 2>&1
+show_progress 50
 
-function print_step {
-    echo -e "${PURPLE}[Шаг] $1${NC}"
-}
+# 3. Установка sudo
+apt-get install -y sudo >/dev/null 2>&1
+show_progress 70
 
-# Функция для прогресса
-function show_progress {
-    local duration=$1
-    local progress=0
-    while [ $progress -le 100 ]; do
-        echo -ne "\r${CYAN}Процесс: [${GREEN}$(printf '%*s' $((progress / 2)) | tr ' ' '#')$(printf '%*s' $((50 - progress / 2)))] $progress%${NC}"
-        sleep 0.1
-        ((progress++))
-    done
-    echo ""
-}
+# 4. Установка базовых утилит (ufw и fail2ban)
+apt-get install -y ufw fail2ban >/dev/null 2>&1
+show_progress 90
 
-# Обновляем список доступных пакетов
-print_info "Обновляем список доступных пакетов..."
-show_progress 10
-apt update -y
-
-# Обновляем все установленные пакеты
-print_info "Обновляем все установленные пакеты..."
-show_progress 10
-apt upgrade -y
-
-# Обновляем дистрибутив до последней версии
-print_info "Обновляем дистрибутив до последней версии..."
-show_progress 10
-apt dist-upgrade -y
-
-# Устанавливаем sudo
-print_info "Устанавливаем sudo..."
-show_progress 10
-apt install sudo -y
-
-# Устанавливаем ufw (если не установлен)
-print_info "Устанавливаем ufw (фаервол)..."
-show_progress 10
-apt install ufw -y
-
-# Устанавливаем fail2ban для защиты от брутфорс атак
-print_info "Устанавливаем fail2ban для защиты от атак..."
-show_progress 10
-apt install fail2ban -y
-
-# Проверка наличия ss или netstat
-print_info "Проверяем наличие утилиты ss или netstat..."
-if ! command -v ss &> /dev/null; then
-    print_warning "ss не найден, будет установлена утилита netstat."
-    apt install net-tools -y
-    ss() {
-        netstat "$@"
-    }
-fi
-
-# Функция для проверки, занят ли порт
-is_port_free() {
-    local port=$1
-    # Проверка, используется ли порт
-    ss -tuln | grep ":$port" > /dev/null
-    return $?
-}
-
-# Генерация случайного порта в диапазоне 1024-49151
-generate_random_port() {
-    local port
-    while true; do
-        # Генерация случайного порта в диапазоне от 1024 до 49151
-        port=$((RANDOM % 48128 + 1024))
-        
-        # Проверка, свободен ли порт
-        if is_port_free $port; then
-            echo $port
-            return 0
-        fi
-    done
-}
-
-# Генерируем случайный порт для SSH
-print_step "Генерируем случайный порт для SSH..."
-new_ssh_port=$(generate_random_port)
-
-# Запрашиваем имя нового пользователя
-print_info "Введите имя нового пользователя:"
-read new_user
-
-# Проверяем, что имя пользователя введено корректно
-if [[ -z "$new_user" || "$new_user" =~ [[:space:]] ]]; then
-    print_error "Ошибка: Имя пользователя не может быть пустым или содержать пробелы. Попробуйте снова."
-    exit 1
-fi
-
-# Создаем нового пользователя
-print_step "Создаем нового пользователя $new_user..."
-adduser $new_user
-
-# Добавляем пользователя в группу sudo
-print_step "Добавляем пользователя $new_user в группу sudo..."
-usermod -aG sudo $new_user
-
-# Подтверждаем, что пользователь был успешно добавлен в группу sudo
-print_success "$new_user добавлен в группу sudo."
-
-print_info "Настройка SSH для повышения безопасности..."
-
-# Редактируем конфигурацию sshd
-# Отключаем доступ root по ssh
-print_step "Отключаем доступ root по SSH..."
-sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
-
-# Меняем порт на случайно сгенерированный
-print_step "Меняем порт SSH на $new_ssh_port..."
-sed -i "s/#Port 22/Port $new_ssh_port/" /etc/ssh/sshd_config
-
-# Отключаем аутентификацию по паролю
-print_step "Отключаем аутентификацию по паролю..."
-sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-
-# Перезапускаем ssh сервис
-print_step "Перезапускаем SSH..."
-systemctl restart ssh
-
-print_success "SSH настроен: доступ по паролю отключен, доступ root отключен, порт изменен на $new_ssh_port."
-
-# Настройка фаервола
-print_info "Настройка фаервола..."
-ufw allow $new_ssh_port/tcp
-ufw default deny incoming
-ufw default allow outgoing
-ufw enable
-
-# Запуск и настройка fail2ban
-print_info "Настройка fail2ban..."
-systemctl start fail2ban
-systemctl enable fail2ban
-
-# Очистка пакетов
-print_info "Очистка пакетов..."
-apt clean
-apt autoremove -y
-
-print_success "Фаервол и защита от брутфорса настроены. Система очищена от ненужных пакетов."
-
-echo -e "${GREEN}Процесс завершен успешно! Все настройки выполнены.${NC}"
+# Финальная проверка
+show_progress 100
+echo -e "\nНастройка завершена!"
