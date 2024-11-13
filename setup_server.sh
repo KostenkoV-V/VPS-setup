@@ -31,6 +31,15 @@ validate_username() {
     fi
 }
 
+# Функция для проверки наличия логов
+check_logs() {
+    # Проверка, существует ли файл auth.log
+    if ! ls /var/log/*.log 1> /dev/null 2>&1 || ! grep -q 'auth.log' /var/log/*.log; then
+        return 1  # Логи не найдены
+    fi
+    return 0  # Логи найдены
+}
+
 # Этапы установки и обновления
 echo "Обновление и установка пакетов..."
 
@@ -54,6 +63,16 @@ show_progress 90
 # Финальная проверка
 show_progress 100
 echo -e "\nНастройка завершена!"
+
+# Проверка наличия логов
+if ! check_logs; then
+    echo -e "\nЛоги не найдены. Устанавливаем rsyslog..."
+    apt-get install -y rsyslog >/dev/null 2>&1
+    systemctl restart rsyslog
+    echo -e "\nRsyslog установлен и перезапущен."
+else
+    echo -e "\nЛоги найдены, продолжаем настройку Fail2Ban."
+fi
 
 # Запрос на создание нового пользователя вместо root
 echo -e "\nХотите создать нового пользователя для входа в систему вместо root? (да/нет)"
