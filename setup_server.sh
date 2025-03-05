@@ -50,6 +50,7 @@ show_progress 30
 
 # 2. Обновление существующих пакетов
 apt-get upgrade -y >/dev/null 2>&1
+apt-get dist-upgrade -y >/dev/null 2>&1
 show_progress 50
 
 # 3. Установка sudo
@@ -123,7 +124,7 @@ while true; do
 done
 
 # Настройка порта SSH в конфигурации
-sed -i "s/^#Port 22/Port $ssh_port/" /etc/ssh/sshd_config
+sed -i "s/^#\?Port [0-9]\+/Port $ssh_port/" /etc/ssh/sshd_config
 systemctl restart ssh
 echo -e "\nПорт SSH успешно изменен на $ssh_port."
 
@@ -163,15 +164,22 @@ fi
 read -p "Хотите установить защиту от брутфорса с помощью fail2ban? (да/нет): " install_fail2ban
 
 if [[ "$install_fail2ban" =~ ^(да|y|yes)$ ]]; then
-    # Конфигурирование fail2ban
     echo -e "\nНастройка fail2ban..."
-
-    # Запрос параметров для fail2ban
     read -p "Введите количество неудачных попыток входа до блокировки: " max_attempts
     read -p "Введите время блокировки в секундах: " bantime
     read -p "Введите временной интервал (в секундах) для подсчета попыток: " findtime
 
-    # Создание или изменение конфигурации для SSH
+    if [ -f /etc/fail2ban/jail.d/ssh.local ]; then
+        echo "Конфигурация fail2ban уже существует. Перезаписывать? (да/нет)"
+        read -r confirm
+        if [[ "$confirm" =~ ^(да|y|yes)$ ]]; then
+            rm /etc/fail2ban/jail.d/ssh.local
+        else
+            echo "Пропускаем настройку fail2ban."
+            exit 0
+        fi
+    fi
+
     cat <<EOL > /etc/fail2ban/jail.d/ssh.local
 [sshd]
 enabled = true
@@ -182,10 +190,6 @@ bantime = $bantime
 findtime = $findtime
 EOL
 
-    # Перезапуск fail2ban для применения изменений
     systemctl restart fail2ban
-
     echo -e "\nЗащита от брутфорса с помощью fail2ban настроена и активирована."
-else
-    echo -e "\nЗащита от брутфорса с помощью fail2ban не будет установлена."
 fi
