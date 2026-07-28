@@ -13,7 +13,8 @@
 - предлагает изменить порт SSH (рекомендация: использовать порт в диапазоне 1024–65535);
 - настраивает UFW: разрешает SSH (на выбранном порту), HTTP/HTTPS и блокирует остальные входящие;
 - опционально отключает вход по `root` через SSH (`PermitRootLogin no`);
-- настраивает `fail2ban` для защиты SSH (настраиваемые пороги/тайминги).
+- настраивает `fail2ban` для защиты SSH (настраиваемые пороги/тайминги);
+- настраивает маскировку под обычный веб-хостинг.
 
 ---
 
@@ -38,13 +39,13 @@
 1. Для запуска скрипта с правами `root`:
 
     ```bash
-    bash <(curl -Ls https://raw.githubusercontent.com/KostenkoV-V/VPS-setup/main/setup_server.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/SergeyKrasnoslobodtsev/VPS-setup/main/setup_server.sh)
     ```
 
 2. Если вам нужно явно указать `sudo`:
 
     ```bash
-    sudo curl -Ls https://raw.githubusercontent.com/KostenkoV-V/VPS-setup/main/setup_server.sh -o /tmp/setup_server.sh && sudo bash /tmp/setup_server.sh
+    sudo curl -Ls https://raw.githubusercontent.com/SergeyKrasnoslobodtsev/VPS-setup/main/setup_server.sh -o /tmp/setup_server.sh && sudo bash /tmp/setup_server.sh
     ```
 
 
